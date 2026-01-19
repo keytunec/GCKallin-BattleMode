@@ -42,7 +42,7 @@ const Leaderboard = ({ matches, players }) => {
             <th className="p-4">Name</th>
             <th className="p-4 text-center">Siege</th>
             <th className="p-4 text-center">Halved</th>
-            <th className="p-4 text-center">Punkte</th>
+            <th className="p-4 text-center border-l border-yellow-600">Punkte</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -51,7 +51,7 @@ const Leaderboard = ({ matches, players }) => {
               <td className="p-4 font-bold italic">{name}</td>
               <td className="p-4 text-center text-green-400 font-mono text-xl">{s.siege}</td>
               <td className="p-4 text-center text-blue-400 font-mono text-xl">{s.halved}</td>
-              <td className="p-4 text-center text-yellow-500 font-black text-2xl">{s.punkte}</td>
+              <td className="p-4 text-center text-yellow-500 font-black text-2xl border-l border-slate-800">{s.punkte}</td>
             </tr>
           ))}
         </tbody>
@@ -78,7 +78,7 @@ export default function BattleArena() {
   }
 
   const fireVictory = () => {
-    const end = Date.now() + (4 * 1000); // 4 Sekunden Animation
+    const end = Date.now() + (4 * 1000); 
     (function frame() {
       confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#D4AF37', '#ffffff', '#004225'] });
       confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#D4AF37', '#ffffff', '#004225'] });
@@ -89,32 +89,57 @@ export default function BattleArena() {
   const generateInitialMatches = async () => {
     const code = prompt("Admin-Code:");
     if (code !== TEAM_CODE) return;
+    
     const names = ['Alex', 'Fabi', 'Normi', 'Basti', 'Pocki', 'Schwänchen', 'Ben', 'Clemens', 'Daniel', 'Jos', 'Niklas', 'Philipp', 'Migo', 'Maik', 'Illya'];
+    
+    // Algorithmus für ungerade Spieler: Dummy hinzufügen
     let temp = [...names];
+    if (temp.length % 2 !== 0) temp.push(null); 
+    
     const all = [];
-    for (let round = 0; round < temp.length; round++) {
+    const roundsCount = names.length; // 15 Runden
+
+    for (let round = 0; round < roundsCount; round++) {
       for (let i = 0; i < temp.length / 2; i++) {
         const p1 = temp[i];
         const p2 = temp[temp.length - 1 - i];
-        if (p1 && p2) all.push({ player_1: p1, player_2: p2, round_number: round + 1, completed: false });
+        
+        // Nur Matches speichern, die keinen Platzhalter (null) enthalten
+        if (p1 !== null && p2 !== null) {
+          all.push({ 
+            player_1: p1, 
+            player_2: p2, 
+            round_number: round + 1, 
+            completed: false 
+          });
+        }
       }
+      // Kreis-Rotation: Das erste Element bleibt fest, der Rest rotiert
       temp.splice(1, 0, temp.pop());
     }
+
+    // Vorher alte Matches löschen um Dubletten zu vermeiden
+    await supabase.from('matches').delete().neq('id', 0);
     await supabase.from('matches').insert(all);
     fetchData();
+    alert("🔥 Turnierplan mit 15 Runden erstellt!");
   };
 
   const handleWin = async (matchId, winnerName) => {
     const code = prompt("Team-Code:");
     if (code !== TEAM_CODE) return;
-    const score = prompt("Ergebnis (z.B. 3&2 oder AS):");
-    if (!score) return;
-    const isAS = score.toUpperCase() === 'AS';
+    const scoreInput = prompt("Ergebnis (z.B. 3&2 oder AS für Unentschieden):");
+    if (!scoreInput) return;
+    
+    const score = scoreInput.toUpperCase();
+    const isAS = score === 'AS';
+
     const { error } = await supabase.from('matches').update({ 
       winner: isAS ? null : winnerName, 
-      score: score.toUpperCase(), 
+      score: score, 
       completed: true 
     }).eq('id', matchId);
+
     if (!error) { fireVictory(); fetchData(); }
   };
 
@@ -134,7 +159,6 @@ export default function BattleArena() {
   }, {});
   const roundKeys = Object.keys(groupedMatches).sort((a, b) => a - b);
 
-  // Der finale Raw-Bildlink
   const bgUrl = "https://raw.githubusercontent.com/keytunec/GCKallin-BattleMode/main/Gemini_Generated_Image_mk0buymk0buymk0b.png";
 
   return (
@@ -149,8 +173,8 @@ export default function BattleArena() {
         </header>
 
         <nav className="flex justify-center gap-4 mb-8">
-          <button onClick={() => setActiveTab('matches')} className={`px-8 py-3 rounded-full font-black uppercase text-xs tracking-widest transition-all ${activeTab === 'matches' ? 'bg-yellow-500 text-black shadow-lg' : 'bg-slate-800'}`}>Battles</button>
-          <button onClick={() => setActiveTab('leaderboard')} className={`px-8 py-3 rounded-full font-black uppercase text-xs tracking-widest transition-all ${activeTab === 'leaderboard' ? 'bg-yellow-500 text-black shadow-lg' : 'bg-slate-800'}`}>Tabelle</button>
+          <button onClick={() => setActiveTab('matches')} className={`px-8 py-3 rounded-full font-black uppercase text-xs tracking-widest transition-all ${activeTab === 'matches' ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/50' : 'bg-slate-800'}`}>Battles</button>
+          <button onClick={() => setActiveTab('leaderboard')} className={`px-8 py-3 rounded-full font-black uppercase text-xs tracking-widest transition-all ${activeTab === 'leaderboard' ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/50' : 'bg-slate-800'}`}>Tabelle</button>
         </nav>
 
         {loading ? (
@@ -160,28 +184,37 @@ export default function BattleArena() {
             {activeTab === 'matches' && (
               matches.length === 0 ? (
                 <div className="text-center p-10 bg-black/60 rounded-xl border-2 border-dashed border-slate-700">
-                  <button onClick={generateInitialMatches} className="bg-red-600 px-6 py-3 rounded font-bold uppercase hover:bg-red-700 transition">Profi-Spielplan initialisieren</button>
+                  <button onClick={generateInitialMatches} className="bg-red-600 px-6 py-3 rounded font-bold uppercase hover:bg-red-700 transition">Turnierplan generieren</button>
                 </div>
               ) : (
-                roundKeys.map(rNum => (
-                  <details key={rNum} className="group bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden shadow-2xl mb-4">
-                    <summary className="p-5 cursor-pointer flex justify-between items-center font-black uppercase text-yellow-500 group-open:bg-yellow-500 group-open:text-black transition-all">
-                      Runde {rNum} <span className="text-[10px] px-3 py-1 border border-current rounded-full italic">Spieltag</span>
-                    </summary>
-                    <div className="p-4 grid gap-3 bg-black/40 border-t border-white/5">
-                      {groupedMatches[rNum].map(m => (
-                        <div key={m.id} className={`relative p-4 rounded-xl border-2 flex items-center justify-between transition-all ${m.completed ? 'border-green-600/50 bg-green-900/20' : 'border-white/5 bg-slate-900/80 shadow-lg'}`}>
-                          <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_1)} className={`flex-1 font-bold text-center ${m.winner === m.player_1 ? 'text-yellow-400 text-2xl' : 'text-white'}`}>{m.player_1}</button>
-                          <div className="px-2 text-[10px] text-slate-600 font-black italic">vs</div>
-                          <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_2)} className={`flex-1 font-bold text-center ${m.winner === m.player_2 ? 'text-yellow-400 text-2xl' : 'text-white'}`}>{m.player_2}</button>
-                          {m.completed && (
-                            <button onClick={() => resetMatch(m.id)} className="absolute -top-1 -right-1 bg-red-600 text-[10px] w-5 h-5 rounded-full flex items-center justify-center hover:scale-110 transition">×</button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                ))
+                roundKeys.map(rNum => {
+                  const roundMatches = groupedMatches[rNum];
+                  // Wer hat diese Runde frei?
+                  const playersInRound = new Set();
+                  roundMatches.forEach(m => { playersInRound.add(m.player_1); playersInRound.add(m.player_2); });
+                  const byePlayer = players.find(p => !playersInRound.has(p.name));
+
+                  return (
+                    <details key={rNum} className="group bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden shadow-2xl mb-4">
+                      <summary className="p-5 cursor-pointer flex justify-between items-center font-black uppercase text-yellow-500 group-open:bg-yellow-500 group-open:text-black transition-all">
+                        <span>Runde {rNum}</span>
+                        {byePlayer && <span className="text-[9px] uppercase tracking-tighter opacity-70 group-open:opacity-100 italic">Spielfrei: {byePlayer.name}</span>}
+                      </summary>
+                      <div className="p-4 grid gap-3 bg-black/40 border-t border-white/5">
+                        {roundMatches.map(m => (
+                          <div key={m.id} className={`relative p-4 rounded-xl border-2 flex items-center justify-between transition-all ${m.completed ? 'border-green-600/50 bg-green-900/20' : 'border-white/5 bg-slate-900/80 shadow-lg hover:border-yellow-500/30'}`}>
+                            <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_1)} className={`flex-1 font-bold text-center ${m.winner === m.player_1 ? 'text-yellow-400 text-2xl drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]' : 'text-white'}`}>{m.player_1}</button>
+                            <div className="px-2 text-[10px] text-slate-600 font-black italic">vs</div>
+                            <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_2)} className={`flex-1 font-bold text-center ${m.winner === m.player_2 ? 'text-yellow-400 text-2xl drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]' : 'text-white'}`}>{m.player_2}</button>
+                            {m.completed && (
+                              <button onClick={() => resetMatch(m.id)} className="absolute -top-1 -right-1 bg-red-600 text-[10px] w-5 h-5 rounded-full flex items-center justify-center hover:scale-125 transition shadow-lg">×</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })
               )
             )}
             {activeTab === 'leaderboard' && <Leaderboard matches={matches} players={players} />}
