@@ -107,7 +107,8 @@ export default function BattleArena() {
   }
 
   // BILD-PFAD: Nutzt jetzt die neue PNG Datei
-  const bgUrl = "https://keytunec.github.io/GCKallin-BattleMode/Gemini_Generated_Image_mk0buymk0buymk0b.png";
+  // Wir nutzen den Raw-Content Link von GitHub, der funktioniert IMMER.
+  const bgUrl = "https://raw.githubusercontent.com/keytunec/GCKallin-BattleMode/main/Gemini_Generated_Image_mk0buymk0buymk0b.png";
 
   return (
     <div className="min-h-screen text-white font-sans relative bg-black">
