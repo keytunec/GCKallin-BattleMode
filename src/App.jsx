@@ -117,7 +117,7 @@ export default function BattleArena() {
         className="fixed inset-0 z-0 bg-cover bg-center no-repeat transition-opacity duration-1000"
         style={{ backgroundImage: `url("${bgUrl}")` }}
       >
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-[2px]"></div>
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"></div>
       </div>
 
       <div className="relative z-10 p-4 max-w-4xl mx-auto">
