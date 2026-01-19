@@ -88,7 +88,7 @@ export default function BattleArena() {
     rounds.push(matches.slice(i * matchesPerRound, (i + 1) * matchesPerRound));
   }
 
-  const bgUrl = `${import.meta.env.BASE_URL}Gemini_Generated_Image_mk0buymk0buymk0b.jpg`;
+  const bgUrl = `${import.meta.env.BASE_URL}bg.png`.replace('//', '/');
 
   return (
     <div className="min-h-screen text-white font-sans relative bg-slate-900">
