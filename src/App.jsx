@@ -62,6 +62,46 @@ export default function BattleArena() {
     }
   };
 
+  const generateInitialMatches = async () => {
+  const code = prompt("Admin-Code:");
+  if (code !== TEAM_CODE) return;
+
+  const names = ['Alex', 'Fabi', 'Normi', 'Basti', 'Pocki', 'Schwänchen', 'Ben', 'Clemens', 'Daniel', 'Jos', 'Niklas', 'Philipp', 'Migo', 'Maik', 'Illya'];
+  
+  // Wir brauchen eine gerade Anzahl für den Algorithmus, 
+  // also fügen wir einen virtuellen "Spielfrei"-Platzhalter hinzu
+  let tempPlayers = [...names];
+  const totalRounds = tempPlayers.length; // 15 Runden
+  const matchesPerRound = 7;
+  const allMatches = [];
+
+  for (let round = 0; round < totalRounds; round++) {
+    for (let i = 0; i < (tempPlayers.length / 2); i++) {
+      const p1 = tempPlayers[i];
+      const p2 = tempPlayers[tempPlayers.length - 1 - i];
+
+      // Spielfrei ignorieren, nur echte Matches speichern
+      if (p1 !== null && p2 !== null) {
+        allMatches.push({
+          player_1: p1,
+          player_2: p2,
+          round_number: round + 1,
+          completed: false
+        });
+      }
+    }
+    // Rotation: Das erste Element bleibt fest, der Rest rotiert
+    tempPlayers.splice(1, 0, tempPlayers.pop());
+  }
+
+  const { error } = await supabase.from('matches').insert(allMatches);
+  if (error) alert(error.message);
+  else {
+    alert("🔥 Profi-Spielplan erstellt! 15 Runden à 7 Matches.");
+    fetchData();
+  }
+};
+
   // NEU: Funktion zum Zurücksetzen eines Matches
   const resetMatch = async (matchId) => {
     const code = prompt("Team-Code zum ZURÜCKSETZEN:");
@@ -101,10 +141,16 @@ export default function BattleArena() {
   };
 
   const matchesPerRound = 15;
-  const rounds = [];
-  for (let i = 0; i < Math.ceil(matches.length / matchesPerRound); i++) {
-    rounds.push(matches.slice(i * matchesPerRound, (i + 1) * matchesPerRound));
-  }
+  const groupedRounds = matches.reduce((acc, match) => {
+  const r = match.round_number || 1;
+  if (!acc[r]) acc[r] = [];
+  acc[r].push(match);
+  return acc;
+}, {});
+
+// In ein Array umwandeln zum Rendern
+const roundKeys = Object.keys(groupedRounds).sort((a, b) => a - b);
+  
 
   // BILD-PFAD: Nutzt jetzt die neue PNG Datei
   // Wir nutzen den Raw-Content Link von GitHub, der funktioniert IMMER.
@@ -134,33 +180,23 @@ export default function BattleArena() {
           <div className="text-center py-20 text-yellow-500 font-black animate-pulse">LADE DATEN...</div>
         ) : (
           <div className="space-y-4">
-            {activeTab === 'matches' && rounds.map((rMatches, rIdx) => (
-              <details key={rIdx} className="group bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
-                <summary className="p-5 cursor-pointer flex justify-between items-center font-black uppercase text-yellow-500 group-open:bg-yellow-500 group-open:text-black transition-all">
-                  Runde {rIdx + 1}
-                  <span className="text-[10px] px-3 py-1 border border-current rounded-full italic">Öffnen</span>
-                </summary>
-                <div className="p-4 grid gap-3 bg-black/40 border-t border-white/5">
-                  {rMatches.map(m => (
-                    <div key={m.id} className={`relative p-4 rounded-xl border-2 flex items-center justify-between transition-all ${m.completed ? 'border-green-600/50 bg-green-900/20' : 'border-white/5 bg-slate-800/80'}`}>
-                      <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_1)} className={`flex-1 font-bold text-center ${m.winner === m.player_1 ? 'text-yellow-400 text-2xl' : 'text-white'}`}>{m.player_1}</button>
-                      <div className="px-2 text-[10px] text-slate-600 font-black italic">vs</div>
-                      <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_2)} className={`flex-1 font-bold text-center ${m.winner === m.player_2 ? 'text-yellow-400 text-2xl' : 'text-white'}`}>{m.player_2}</button>
-                      
-                      {m.completed && (
-                        <button 
-                          onClick={() => resetMatch(m.id)}
-                          className="absolute -top-2 -right-2 bg-red-600 text-[8px] p-1 rounded-full hover:scale-110 transition"
-                          title="Zurücksetzen"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ))}
+            {activeTab === 'matches' && roundKeys.map((rNum) => (
+  <details key={rNum} className="group bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden shadow-2xl mb-4">
+    <summary className="p-5 cursor-pointer flex justify-between items-center font-black uppercase text-yellow-500 group-open:bg-yellow-500 group-open:text-black transition-all">
+      Runde {rNum}
+      <span className="text-[10px] px-3 py-1 border border-current rounded-full italic">Spieltag</span>
+    </summary>
+    <div className="p-4 grid gap-3 bg-black/40 border-t border-white/5">
+      {groupedRounds[rNum].map(m => (
+        <div key={m.id} className={`p-4 rounded-xl border-2 flex items-center justify-between transition-all ${m.completed ? 'border-green-600/50 bg-green-900/20' : 'border-white/5 bg-slate-900/80 shadow-lg'}`}>
+          <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_1)} className={`flex-1 font-bold text-lg text-center ${m.winner === m.player_1 ? 'text-yellow-400 text-2xl' : 'text-white'}`}>{m.player_1}</button>
+          <div className="px-2 text-[10px] text-slate-600 font-black italic">vs</div>
+          <button disabled={m.completed} onClick={() => handleWin(m.id, m.player_2)} className={`flex-1 font-bold text-lg text-center ${m.winner === m.player_2 ? 'text-yellow-400 text-2xl' : 'text-white'}`}>{m.player_2}</button>
+        </div>
+      ))}
+    </div>
+  </details>
+))}
 
             {activeTab === 'leaderboard' && (
               <div className="bg-slate-900/90 backdrop-blur-md border border-yellow-500/30 rounded-2xl overflow-hidden shadow-2xl">
