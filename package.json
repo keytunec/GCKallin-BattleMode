@@ -1,8 +1,9 @@
 {
-  "name": "kallin-battle-arena",
+  "name": "gckallin-battlemode",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://keytunec.github.io/GCKallin-BattleMode",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
